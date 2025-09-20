@@ -102,7 +102,7 @@ vim.g.have_nerd_font = false
 vim.o.number = true
 -- You can also add relative line numbers, to help with jumping.
 --  Experiment for yourself to see if you like it!
--- vim.o.relativenumber = true
+vim.o.relativenumber = true
 
 -- Enable mouse mode, can be useful for resizing splits for example!
 vim.o.mouse = 'a'
@@ -114,9 +114,9 @@ vim.o.showmode = false
 --  Schedule the setting after `UiEnter` because it can increase startup-time.
 --  Remove this option if you want your OS clipboard to remain independent.
 --  See `:help 'clipboard'`
-vim.schedule(function()
-  vim.o.clipboard = 'unnamedplus'
-end)
+-- vim.schedule(function()
+--  vim.o.clipboard = 'unnamedplus'
+-- end)
 
 -- Enable break indent
 vim.o.breakindent = true
@@ -125,8 +125,8 @@ vim.o.breakindent = true
 vim.o.undofile = true
 
 -- Case-insensitive searching UNLESS \C or one or more capital letters in the search term
-vim.o.ignorecase = true
-vim.o.smartcase = true
+--vim.o.ignorecase = true
+--vim.o.smartcase = true
 
 -- Keep signcolumn on by default
 vim.o.signcolumn = 'yes'
@@ -673,8 +673,8 @@ require('lazy').setup({
       local servers = {
         -- clangd = {},
         -- gopls = {},
-        -- pyright = {},
-        -- rust_analyzer = {},
+        pyright = {},
+        rust_analyzer = {},
         -- ... etc. See `:help lspconfig-all` for a list of all the pre-configured LSPs
         --
         -- Some languages (like typescript) have entire language plugins that can be useful:
@@ -736,6 +736,63 @@ require('lazy').setup({
     end,
   },
 
+  -- Debugger
+
+  -- DAP core + UI
+  {
+    'mfussenegger/nvim-dap',
+    dependencies = {
+      'rcarriga/nvim-dap-ui',
+      'mfussenegger/nvim-dap-python',
+      'nvim-neotest/nvim-nio',
+    },
+    config = function()
+      local dap = require 'dap'
+      local dapui = require 'dapui'
+
+      dapui.setup()
+      require('dap-python').setup 'python'
+
+      dap.listeners.after.event_initialized['dapui_config'] = function()
+        dapui.open()
+      end
+      dap.listeners.before.event_terminated['dapui_config'] = function()
+        dapui.close()
+      end
+      dap.listeners.before.event_exited['dapui_config'] = function()
+        dapui.close()
+      end
+      require('dap.ext.vscode').load_launchjs(nil, {})
+
+      -- Keymaps for DAP
+      local map = vim.keymap.set
+      map('n', '<leader>db', function()
+        dap.toggle_breakpoint()
+      end, { desc = 'Toggle Breakpoint' })
+      map('n', '<leader>dc', function()
+        dap.continue()
+      end, { desc = 'Continue' })
+      map('n', '<leader>dC', function()
+        dap.run_to_cursor()
+      end, { desc = 'Run to Cursor' })
+      map('n', '<leaderdT', function()
+        dap.terminate()
+      end, { desc = 'Terminate' })
+      map('n', '<leader>do', function()
+        dap.step_over()
+      end, { desc = 'Step Over' })
+      map('n', '<leader>di', function()
+        dap.step_into()
+      end, { desc = 'Step Into' })
+      map('n', '<leader>du', function()
+        dap.step_out()
+      end, { desc = 'Step Out' })
+      map('n', '<leader>dr', function()
+        dap.repl.open()
+      end, { desc = 'Open REPL' })
+    end,
+  },
+
   { -- Autoformat
     'stevearc/conform.nvim',
     event = { 'BufWritePre' },
@@ -769,7 +826,7 @@ require('lazy').setup({
       formatters_by_ft = {
         lua = { 'stylua' },
         -- Conform can also run multiple formatters sequentially
-        -- python = { "isort", "black" },
+        python = { 'isort', 'black' },
         --
         -- You can use 'stop_after_first' to run the first available formatter from the list
         -- javascript = { "prettierd", "prettier", stop_after_first = true },
