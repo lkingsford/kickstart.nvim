@@ -249,6 +249,14 @@ require('lazy').setup({
   -- NOTE: Plugins can be added with a link (or for a github repo: 'owner/repo' link).
   'NMAC427/guess-indent.nvim', -- Detect tabstop and shiftwidth automatically
 
+
+    -- Zen mode
+    "folke/zen-mode.nvim" ,
+
+    -- Fountain
+    'kblin/vim-fountain' ,
+
+
   -- NOTE: Plugins can also be added by using a table,
   -- with the first argument being the link and the following
   -- keys can be used to configure plugin behavior/loading/etc.
@@ -1071,3 +1079,25 @@ require('lazy').setup({
 
 -- The line beneath this is called `modeline`. See `:help modeline`
 -- vim: ts=2 sts=2 sw=2 et
+
+-- Renumber for manuscripts
+vim.api.nvim_create_user_command('RenumberPages', function()
+  local num = 1
+  for i = 0, vim.api.nvim_buf_line_count(0) - 1 do
+    local line = vim.api.nvim_buf_get_lines(0, i, i+1, false)[1]
+    local new = line:gsub("^#%s*p%s*%d+%-?%d*", function()
+      local out = string.format("# p%02d", num)
+      if line:find("-") then
+        out = out .. "-" .. string.format("%02d", num + 1)
+        num = num + 2
+      else
+        num = num + 1
+      end
+      return out
+    end)
+    if new ~= line then
+      vim.api.nvim_buf_set_lines(0, i, i+1, false, {new})
+    end
+  end
+end, {})
+
