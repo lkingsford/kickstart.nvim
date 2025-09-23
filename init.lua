@@ -249,13 +249,11 @@ require('lazy').setup({
   -- NOTE: Plugins can be added with a link (or for a github repo: 'owner/repo' link).
   'NMAC427/guess-indent.nvim', -- Detect tabstop and shiftwidth automatically
 
+  -- Zen mode
+  'folke/zen-mode.nvim',
 
-    -- Zen mode
-    "folke/zen-mode.nvim" ,
-
-    -- Fountain
-    'kblin/vim-fountain' ,
-
+  -- Fountain
+  'kblin/vim-fountain',
 
   -- NOTE: Plugins can also be added by using a table,
   -- with the first argument being the link and the following
@@ -990,6 +988,17 @@ require('lazy').setup({
       local statusline = require 'mini.statusline'
       -- set use_icons to true if you have a Nerd Font
       statusline.setup { use_icons = vim.g.have_nerd_font }
+      --
+      -- Add wordcount to the fileinfo section
+      ---@diagnostic disable-next-line: duplicate-set-field
+      statusline.section_fileinfo = function()
+        local wc = require('wordcount').count()
+        local info = vim.bo.filetype
+        if wc ~= '' then
+          return info .. ' ' .. wc
+        end
+        return info
+      end
 
       -- You can configure sections in the statusline by overriding their
       -- default behavior. For example, here we set the section for
@@ -1043,7 +1052,7 @@ require('lazy').setup({
   -- require 'kickstart.plugins.lint',
   -- require 'kickstart.plugins.autopairs',
   -- require 'kickstart.plugins.neo-tree',
-  -- require 'kickstart.plugins.gitsigns', -- adds gitsigns recommend keymaps
+  require 'kickstart.plugins.gitsigns', -- adds gitsigns recommend keymaps
 
   -- NOTE: The import below can automatically add your own plugins, configuration, etc from `lua/custom/plugins/*.lua`
   --    This is the easiest way to modularize your config.
@@ -1055,6 +1064,177 @@ require('lazy').setup({
   -- Or use telescope!
   -- In normal mode type `<space>sh` then write `lazy.nvim-plugin`
   -- you can continue same window with `<space>sr` which resumes last telescope search
+  {
+    'dennypenta/dashtest.nvim',
+    config = function()
+      local qt = require 'quicktest'
+
+      qt.setup {
+        -- Choose your adapter, here all supported adapters are listed
+        adapters = {
+          require 'quicktest.adapters.golang' {},
+          require 'quicktest.adapters.vitest' {},
+          require 'quicktest.adapters.playwright' {},
+          require 'quicktest.adapters.pytest' {},
+          require 'quicktest.adapters.elixir',
+          require 'quicktest.adapters.criterion',
+          require 'quicktest.adapters.dart',
+          require 'quicktest.adapters.rspec',
+        },
+        ui = {
+          require 'quicktest.ui.panel' {
+            -- split or popup mode, split is default
+            default_win_mode = 'split',
+            use_builtin_colorizer = true,
+          },
+          require 'quicktest.ui.diagnostics'(),
+          -- open on finishing tests if the quickfix list is not empty
+          require 'quicktest.ui.quickfix' { enabled = true, open = false },
+          -- join_to_panel to show with output panel on the same horizontal line,
+          -- only_failedto show only failed tests, the stats shows includes passed and skipped tests as well
+          require 'quicktest.ui.summary' { join_to_panel = true, only_failed = true, enabled = true },
+        },
+      }
+    end,
+    dependencies = {
+      'nvim-lua/plenary.nvim',
+      'MunifTanjim/nui.nvim',
+    },
+    keys = {
+      {
+        '<leader>tl',
+        function()
+          local qt = require 'quicktest'
+          qt.run_line()
+          -- You can force open split or popup like this:
+          -- qt.run_line('split')
+          -- qt.run_line('popup')
+        end,
+        desc = '[T]est Run [L]line',
+      },
+      {
+        '<leader>td',
+        function()
+          local qt = require 'quicktest'
+          -- split output mode (auto), default adapter defined by filetype (auto),
+          qt.run_line('auto', 'auto', { strategy = 'dap' })
+        end,
+        desc = '[D]ebug [L]line',
+      },
+      {
+        '<leader>ta',
+        function()
+          local qt = require 'quicktest'
+          local args_by_ft = {
+            go = { '-v', '-failfast', '-race', 'short', '-count=1' },
+          }
+          local args = args_by_ft[vim.bo.ft]
+          if not args then
+            local msg = string.format('no args for ft=%s found', vim.bo.ft)
+            return vim.notify(msg, vim.log.levels.ERROR)
+          end
+
+          -- pass additional args to tests
+          qt.run_all('auto', 'auto', { additional_args = args })
+        end,
+        desc = '[T]est Run [A]ll',
+      },
+      {
+        '<leader>tf',
+        function()
+          local qt = require 'quicktest'
+
+          qt.run_file()
+        end,
+        desc = '[T]est Run [F]ile',
+      },
+      {
+        '<leader>td',
+        function()
+          local qt = require 'quicktest'
+
+          qt.run_dir()
+        end,
+        desc = '[T]est Run [D]ir',
+      },
+      {
+        '<leader>ta',
+        function()
+          local qt = require 'quicktest'
+
+          qt.run_all()
+        end,
+        desc = '[T]est Run [A]ll',
+      },
+      {
+        '<leader>tp',
+        function()
+          local qt = require 'quicktest'
+
+          qt.run_previous()
+        end,
+        desc = '[T]est Run [P]revious',
+      },
+      {
+        '<leader>tt',
+        function()
+          require('quicktest.ui').get('panel').toggle 'split'
+        end,
+        desc = '[T]est [T]oggle Window',
+      },
+      {
+        '<leader>to',
+        function()
+          require('quicktest.ui').get('panel').toggle 'popup'
+        end,
+        desc = '[T]est [T]oggle Window',
+      },
+      {
+        '<leader>tc',
+        function()
+          local qt = require 'quicktest'
+          -- works only for the default strategy, DAP must be stopped using DAP
+          qt.cancel_current_run()
+        end,
+        desc = '[T]est [C]ancel Current Run',
+      },
+      {
+        ']n',
+        function()
+          local qt = require 'quicktest'
+          qt.next_failed_test()
+        end,
+        desc = 'Next failed test',
+      },
+      {
+        '[n',
+        function()
+          local qt = require 'quicktest'
+          qt.prev_failed_test()
+        end,
+        desc = 'Prev failed test',
+      },
+      {
+        '<leader>ts',
+        function()
+          -- ui is a registry of all registered ui plugins
+          local ui = require 'quicktest.ui'
+          -- you can get any by a name property defined in the plugin itself,
+          -- e.g. summary plugin defines its name property as "summary"
+          local summary = ui.get 'summary'
+          summary.toggle()
+        end,
+        desc = '[T]est [S]ummary',
+      },
+      {
+        '<leader>tS',
+        function()
+          require('quicktest.ui').get('summary').toggle_failed_filter()
+        end,
+        desc = 'Toggle summary show only failed',
+      },
+    },
+  },
 }, {
   ui = {
     -- If you are using a Nerd Font: set icons to an empty table which will use the
@@ -1084,11 +1264,11 @@ require('lazy').setup({
 vim.api.nvim_create_user_command('RenumberPages', function()
   local num = 1
   for i = 0, vim.api.nvim_buf_line_count(0) - 1 do
-    local line = vim.api.nvim_buf_get_lines(0, i, i+1, false)[1]
-    local new = line:gsub("^#%s*p%s*%d+%-?%d*", function()
-      local out = string.format("# p%02d", num)
-      if line:find("-") then
-        out = out .. "-" .. string.format("%02d", num + 1)
+    local line = vim.api.nvim_buf_get_lines(0, i, i + 1, false)[1]
+    local new = line:gsub('^#%s*p%s*%d+%-?%d*', function()
+      local out = string.format('# p%02d', num)
+      if line:find '-' then
+        out = out .. '-' .. string.format('%02d', num + 1)
         num = num + 2
       else
         num = num + 1
@@ -1096,8 +1276,7 @@ vim.api.nvim_create_user_command('RenumberPages', function()
       return out
     end)
     if new ~= line then
-      vim.api.nvim_buf_set_lines(0, i, i+1, false, {new})
+      vim.api.nvim_buf_set_lines(0, i, i + 1, false, { new })
     end
   end
 end, {})
-
